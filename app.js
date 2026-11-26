@@ -92,6 +92,17 @@ function applyA24tSessions(tasks){
    detail:'先完成当天的数据结构。如果还有 60 分钟，就读题、列思路、开始一个小问，到点停。后续小问留待续做。',
    supplemental:true,a24t:true});
  }
+ for(const [date,exercise,priority] of [
+  ['2026-12-28',79,'先完成智能文明当天的安排'],
+  ['2026-12-29',80,'先完成汇报彩排和材料检查']
+ ]){
+  const id='a24t-ex'+exercise;
+  if(tasks.some(t=>t.id===id))continue;
+  tasks.push({id,date,original:date,course:'C++',round:2,pct:0,minutes:45,
+   title:'A24t Ex'+exercise+' · 有空再做',
+   detail:priority+'。如果当天还有时间，最多用 45 分钟读题或做一个小问。没做完可以停，不顺延。',
+   supplemental:true,a24t:true,optional:true});
+ }
 }
 const defaults = () => ({
  tasks:applyCppTaskPlan(structuredClone(seed)), events:[...Object.keys(courses).map(course=>({id:course,course,title:course+'期末考试',status:'待确认'})),{id:'civil-talk',course:'智能文明',title:'智能文明汇报（晚间第三节）',date:'2026-11-30',status:'暂定'}],
@@ -142,13 +153,13 @@ function capacity(day){return Math.min(limit(day),windows(day).reduce((sum,[a,b]
 function protectedDay(project,day){return Boolean(project?.start&&project?.end&&day>=project.start&&day<=project.end)}
 function plan(from,reason,forced=[],allowBuffer=false){
  const before=Object.fromEntries(state.tasks.map(t=>[t.id,t.date]));
- const movable=state.tasks.filter(t=>t.pct<100&&!t.fixed&&(forced.includes(t.id)||!t.date||t.date<from));
+ const movable=state.tasks.filter(t=>!t.optional&&t.pct<100&&!t.fixed&&(forced.includes(t.id)||!t.date||t.date<from));
  const movableIds=new Set(movable.map(t=>t.id));
  const occupied={};
  const bucket=d=>occupied[d]??={load:0,main:new Set()};
  const reserve=(t,d)=>{const b=bucket(d);b.load+=remaining(t);if(!t.project&&!t.supplemental)b.main.add(t.course);if(t.a24t)b.a24t=true};
  for(const task of state.tasks) if(!movableIds.has(task.id)&&task.date){
-  if(task.pct<100)reserve(task,task.date);
+  if(task.pct<100&&!task.optional)reserve(task,task.date);
   else if(task.a24t)bucket(task.date).a24t=true;
  }
  const deadline=t=>{const p=state.projects[t.project];return (p?.status==='已确认'&&p.deadline)||state.events.find(e=>e.course===t.course&&e.title.endsWith('期末考试')&&e.status==='已确认')?.date||null};
@@ -183,17 +194,17 @@ function plan(from,reason,forced=[],allowBuffer=false){
 }
 const list=(arr,fn,empty='暂无记录')=>arr.length?arr.map(fn).join(''):'<p class="muted">'+esc(empty)+'</p>';
 const btn=(label,action,id='',style='')=>'<button type="button" class="'+style+'" data-action="'+action+'" data-id="'+esc(id)+'">'+esc(label)+'</button>';
-function taskCard(t){return '<article class="task"><span class="pill">'+esc(t.course)+(t.project?' · 项目':t.supplemental?' · 加练':'')+'</span><h3>'+esc(t.title)+'</h3><small>'+esc(t.date||'待安排')+' · '+(t.pct===100?'已完成':'剩余 '+remaining(t)+' 分钟 · '+Math.round(t.pct)+'%')+(t.fixed?' · 已固定':'')+'</small><details><summary>任务说明</summary>'+esc(t.detail)+'</details><div class="actions">'+btn('记录进度','edit',t.id)+ (t.pct<100&&!t.fixed?btn('延期','delay',t.id):'')+'</div></article>'}
+function taskCard(t){return '<article class="task"><span class="pill">'+esc(t.course)+(t.project?' · 项目':t.supplemental?' · 加练':'')+'</span><h3>'+esc(t.title)+'</h3><small>'+esc(t.date||'待安排')+' · '+(t.pct===100?'已完成':'剩余 '+remaining(t)+' 分钟 · '+Math.round(t.pct)+'%')+(t.fixed?' · 已固定':'')+'</small><details><summary>任务说明</summary>'+esc(t.detail)+'</details><div class="actions">'+btn('记录进度','edit',t.id)+ (t.pct<100&&!t.fixed&&!t.optional?btn('延期','delay',t.id):'')+'</div></article>'}
 function eventsCard(){
  const nodes=[...state.events,...Object.values(state.projects).map(p=>({title:p.title,date:p.deadline,status:p.status,id:p.id,project:true}))];
  return '<section class="card"><h2>重要节点</h2>'+list(nodes,n=>'<div class="task"><strong>'+esc(n.title)+'</strong><br><small>'+esc(n.date||'日期待确认')+' · '+esc(n.status)+(n.date&&n.status==='已确认'?' · '+Math.round((Date.parse(n.date)-Date.parse(today()))/86400000)+' 天':'')+'</small> '+btn('编辑',n.project?'project':'event',n.id)+'</div>')+'</section>';
 }
 function progressCard(){
- return '<section class="card"><h2>课程进度</h2>'+Object.keys(courses).map(c=>'<div class="task">'+btn(c,'course',c)+[1,2].map(round=>{const ts=state.tasks.filter(t=>t.course===c&&!t.project&&t.round===round);const completed=ts.filter(t=>t.pct===100).length;return '<div><small>第 '+round+' 轮 · '+completed+'/'+ts.length+'</small><progress aria-label="'+c+'第'+round+'轮" value="'+completed+'" max="'+(ts.length||1)+'"></progress></div>'}).join('')+'</div>').join('')+'</section>';
+ return '<section class="card"><h2>课程进度</h2>'+Object.keys(courses).map(c=>'<div class="task">'+btn(c,'course',c)+[1,2].map(round=>{const ts=state.tasks.filter(t=>t.course===c&&!t.project&&!t.optional&&t.round===round);const completed=ts.filter(t=>t.pct===100).length;return '<div><small>第 '+round+' 轮 · '+completed+'/'+ts.length+'</small><progress aria-label="'+c+'第'+round+'轮" value="'+completed+'" max="'+(ts.length||1)+'"></progress></div>'}).join('')+'</div>').join('')+'</section>';
 }
 function dayPanel(day){
  const ts=state.tasks.filter(t=>t.date===day);
- const total=ts.reduce((sum,t)=>sum+remaining(t),0);
+ const total=ts.filter(t=>!t.optional).reduce((sum,t)=>sum+remaining(t),0);
  const block=state.classes.filter(x=>x.date===day||(!x.date&&Number(x.weekday)===weekday(day)));
  const free=windows(day);
  return '<section class="card"><div class="row"><h2>'+esc(day)+' 学习清单</h2>'+btn('新增任务','new',day,'primary')+'</div><p class="'+(total>capacity(day)?'warn':'muted')+'">剩余 '+total+' 分钟 · 日容量 '+capacity(day)+' 分钟'+(total>capacity(day)?' · 超出 '+(total-capacity(day))+' 分钟，可拆分或移到同课程日':'')+'</p><p class="muted">可学习时段 '+(free.map(([a,b])=>clock(a)+'–'+clock(b)).join('、')||'无')+(block.length?'':' · 当天无已录入课程')+'</p>'+list(ts,taskCard,'当天暂时没有计划，可以休息或添加任务。')+'</section>';
@@ -214,7 +225,7 @@ function topicKey(course,name,index){
 }
 function courseView(){
  const topics=courses[selected][1].split('、');
- return '<div class="row">'+Object.keys(courses).map(c=>btn(c,'course',c,c===selected?'active':'')).join('')+'</div><div class="grid"><div><section class="card"><h2>'+selected+'</h2><p>'+courses[selected][0]+'</p><p>'+esc(state.events.find(e=>e.id===selected)?.date||'考试日期待确认')+'</p>'+btn('编辑考试','event',selected)+'</section><section class="card"><h2>学习目录</h2>'+(selected==='C++'?'<p class="muted">默认安排中，A24t Ex76–80 待定。先给已开始的难题留续做时间。</p>':'')+topics.map((name,i)=>{const key=topicKey(selected,name,i);const t=state.topics[key];return '<div class="task">'+esc(name)+' <small>'+esc(t?.status|| (selected==='C++'&&i<2?'已学':selected==='项目管理'&&i>=10?'待上传':'未开始'))+'</small> '+btn('记录','topic',key)+(t?.note?'<div class="muted">'+esc(t.note)+'</div>':'')+'</div>'}).join('')+'</section></div><div>'+resourceCard(selected)+'<section class="card"><h2>课程任务</h2>'+btn('新增任务','new',focusDay)+list(state.tasks.filter(t=>t.course===selected),taskCard)+'</section></div></div>';
+ return '<div class="row">'+Object.keys(courses).map(c=>btn(c,'course',c,c===selected?'active':'')).join('')+'</div><div class="grid"><div><section class="card"><h2>'+selected+'</h2><p>'+courses[selected][0]+'</p><p>'+esc(state.events.find(e=>e.id===selected)?.date||'考试日期待确认')+'</p>'+btn('编辑考试','event',selected)+'</section><section class="card"><h2>学习目录</h2>'+(selected==='C++'?'<p class="muted">默认安排中，A24t Ex76–78 待定。Ex79、80 只在 12 月 28、29 日有空时加练。</p>':'')+topics.map((name,i)=>{const key=topicKey(selected,name,i);const t=state.topics[key];return '<div class="task">'+esc(name)+' <small>'+esc(t?.status|| (selected==='C++'&&i<2?'已学':selected==='项目管理'&&i>=10?'待上传':'未开始'))+'</small> '+btn('记录','topic',key)+(t?.note?'<div class="muted">'+esc(t.note)+'</div>':'')+'</div>'}).join('')+'</section></div><div>'+resourceCard(selected)+'<section class="card"><h2>课程任务</h2>'+btn('新增任务','new',focusDay)+list(state.tasks.filter(t=>t.course===selected),taskCard)+'</section></div></div>';
 }
 function resourceCard(course){
  return '<section class="card"><h2>资料</h2>'+btn('添加文件或链接','resource',course)+' '+list(state.resources.filter(r=>!course||course===r.course),r=>'<div class="task"><span class="pill">'+esc(r.course)+'</span> '+esc(r.name)+' '+btn('打开','open',r.id)+(r.note?'<p class="muted">'+esc(r.note)+'</p>':'')+'</div>','还没有添加资料')+'</section>';
@@ -285,7 +296,7 @@ function editTask(t,day,project){
      state.tasks.push(chunk);
      force.push(chunk.id);
     }
-    if(pct>0&&pct<100&&!pinned&&(!data.date||data.date<=current())){
+    if(!task.optional&&pct>0&&pct<100&&!pinned&&(!data.date||data.date<=current())){
      task.earliest=add(current(),1);
      force.push(task.id);
     }
