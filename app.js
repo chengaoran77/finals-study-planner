@@ -59,7 +59,39 @@ function applyCppTaskPlan(tasks){
    [task.title,task.detail]=revision;
   }
  }
+ applyA24tSessions(tasks);
  return tasks;
+}
+function applyA24tSessions(tasks){
+ const sessions=[
+  ['2026-12-19','A24t Ex70–72',70],
+  ['2027-01-03','A24t Ex73–75',72],
+  ['2026-12-30','A24t Ex76–78',74],
+  ['2026-12-31','A24t Ex79–80',75]
+ ];
+ for(const [id,oldTitle,exercise] of sessions){
+  const task=tasks.find(t=>t.id===id);
+  if(!task||task.pct!==0||task.title!==oldTitle)continue;
+  const previousDetail=cppTaskPlan[id]?.[1]||
+   '项目管理汇报仍暂定早八。汇报后留出休息，下午或晚些时候再做三题的核心小问。';
+  if(task.detail!==previousDetail)continue;
+  task.title='A24t Ex'+exercise+' · 单题练习';
+  task.detail='按当天预算只做这一题，记录做到哪一问。超时就留待续做。'+
+   (id==='2026-12-30'?'项目管理汇报仍暂定早八，汇报后先休息。':'');
+  task.a24t=true;
+ }
+ for(const [date,exercise] of [['2026-12-21',71],['2026-12-26',73]]){
+  const id='a24t-ex'+exercise;
+  if(tasks.some(t=>t.id===id))continue;
+  const primary=tasks.find(t=>t.id===date);
+  const used=tasks.filter(t=>t.date===date).reduce((sum,t)=>sum+remaining(t),0);
+  const available=state?.tasks===tasks?capacity(date):180;
+  if(primary?.date!==date||used+60>available||tasks.some(t=>t.date===date&&t.a24t))continue;
+  tasks.push({id,date,original:date,course:'C++',round:2,pct:0,minutes:60,
+   title:'A24t Ex'+exercise+' · 起步',
+   detail:'先完成当天的数据结构。如果还有 60 分钟，就读题、列思路、开始一个小问，到点停。后续小问留待续做。',
+   supplemental:true,a24t:true});
+ }
 }
 const defaults = () => ({
  tasks:applyCppTaskPlan(structuredClone(seed)), events:[...Object.keys(courses).map(course=>({id:course,course,title:course+'期末考试',status:'待确认'})),{id:'civil-talk',course:'智能文明',title:'智能文明汇报（晚间第三节）',date:'2026-11-30',status:'暂定'}],
@@ -114,8 +146,11 @@ function plan(from,reason,forced=[],allowBuffer=false){
  const movableIds=new Set(movable.map(t=>t.id));
  const occupied={};
  const bucket=d=>occupied[d]??={load:0,main:new Set()};
- const reserve=(t,d)=>{const b=bucket(d);b.load+=remaining(t);if(!t.project)b.main.add(t.course)};
- for(const task of state.tasks) if(!movableIds.has(task.id)&&task.date&&task.pct<100)reserve(task,task.date);
+ const reserve=(t,d)=>{const b=bucket(d);b.load+=remaining(t);if(!t.project&&!t.supplemental)b.main.add(t.course);if(t.a24t)b.a24t=true};
+ for(const task of state.tasks) if(!movableIds.has(task.id)&&task.date){
+  if(task.pct<100)reserve(task,task.date);
+  else if(task.a24t)bucket(task.date).a24t=true;
+ }
  const deadline=t=>{const p=state.projects[t.project];return (p?.status==='已确认'&&p.deadline)||state.events.find(e=>e.course===t.course&&e.title.endsWith('期末考试')&&e.status==='已确认')?.date||null};
  const gaps=[];
  movable.sort((a,b)=>(deadline(a)||'9999').localeCompare(deadline(b)||'9999')||(b.priority||0)-(a.priority||0)||a.original.localeCompare(b.original));
@@ -129,7 +164,9 @@ function plan(from,reason,forced=[],allowBuffer=false){
   if(!project?.waiting&&!t.waiting){
    for(let d=earliest;d<=last;d=add(d,1)){
     const slot=bucket(d);
-    if(!t.project&&slot.main.size&&!slot.main.has(t.course))continue;
+    if(t.a24t&&slot.a24t)continue;
+    if(t.supplemental&&d!==t.original)continue;
+    if(!t.project&&!t.supplemental&&slot.main.size&&!slot.main.has(t.course))continue;
     const free=Math.max(0,capacity(d)-slot.load);
     if(protectedDay(project,d)&&!allowBuffer){bufferFit ||= free>=remaining(t);continue}
     max=Math.max(max,free);
@@ -146,7 +183,7 @@ function plan(from,reason,forced=[],allowBuffer=false){
 }
 const list=(arr,fn,empty='暂无记录')=>arr.length?arr.map(fn).join(''):'<p class="muted">'+esc(empty)+'</p>';
 const btn=(label,action,id='',style='')=>'<button type="button" class="'+style+'" data-action="'+action+'" data-id="'+esc(id)+'">'+esc(label)+'</button>';
-function taskCard(t){return '<article class="task"><span class="pill">'+esc(t.course)+(t.project?' · 项目':'')+'</span><h3>'+esc(t.title)+'</h3><small>'+esc(t.date||'待安排')+' · '+(t.pct===100?'已完成':'剩余 '+remaining(t)+' 分钟 · '+Math.round(t.pct)+'%')+(t.fixed?' · 已固定':'')+'</small><details><summary>任务说明</summary>'+esc(t.detail)+'</details><div class="actions">'+btn('记录进度','edit',t.id)+ (t.pct<100&&!t.fixed?btn('延期','delay',t.id):'')+'</div></article>'}
+function taskCard(t){return '<article class="task"><span class="pill">'+esc(t.course)+(t.project?' · 项目':t.supplemental?' · 加练':'')+'</span><h3>'+esc(t.title)+'</h3><small>'+esc(t.date||'待安排')+' · '+(t.pct===100?'已完成':'剩余 '+remaining(t)+' 分钟 · '+Math.round(t.pct)+'%')+(t.fixed?' · 已固定':'')+'</small><details><summary>任务说明</summary>'+esc(t.detail)+'</details><div class="actions">'+btn('记录进度','edit',t.id)+ (t.pct<100&&!t.fixed?btn('延期','delay',t.id):'')+'</div></article>'}
 function eventsCard(){
  const nodes=[...state.events,...Object.values(state.projects).map(p=>({title:p.title,date:p.deadline,status:p.status,id:p.id,project:true}))];
  return '<section class="card"><h2>重要节点</h2>'+list(nodes,n=>'<div class="task"><strong>'+esc(n.title)+'</strong><br><small>'+esc(n.date||'日期待确认')+' · '+esc(n.status)+(n.date&&n.status==='已确认'?' · '+Math.round((Date.parse(n.date)-Date.parse(today()))/86400000)+' 天':'')+'</small> '+btn('编辑',n.project?'project':'event',n.id)+'</div>')+'</section>';
@@ -177,7 +214,7 @@ function topicKey(course,name,index){
 }
 function courseView(){
  const topics=courses[selected][1].split('、');
- return '<div class="row">'+Object.keys(courses).map(c=>btn(c,'course',c,c===selected?'active':'')).join('')+'</div><div class="grid"><div><section class="card"><h2>'+selected+'</h2><p>'+courses[selected][0]+'</p><p>'+esc(state.events.find(e=>e.id===selected)?.date||'考试日期待确认')+'</p>'+btn('编辑考试','event',selected)+'</section><section class="card"><h2>学习目录</h2>'+topics.map((name,i)=>{const key=topicKey(selected,name,i);const t=state.topics[key];return '<div class="task">'+esc(name)+' <small>'+esc(t?.status|| (selected==='C++'&&i<2?'已学':selected==='项目管理'&&i>=10?'待上传':'未开始'))+'</small> '+btn('记录','topic',key)+(t?.note?'<div class="muted">'+esc(t.note)+'</div>':'')+'</div>'}).join('')+'</section></div><div>'+resourceCard(selected)+'<section class="card"><h2>课程任务</h2>'+btn('新增任务','new',focusDay)+list(state.tasks.filter(t=>t.course===selected),taskCard)+'</section></div></div>';
+ return '<div class="row">'+Object.keys(courses).map(c=>btn(c,'course',c,c===selected?'active':'')).join('')+'</div><div class="grid"><div><section class="card"><h2>'+selected+'</h2><p>'+courses[selected][0]+'</p><p>'+esc(state.events.find(e=>e.id===selected)?.date||'考试日期待确认')+'</p>'+btn('编辑考试','event',selected)+'</section><section class="card"><h2>学习目录</h2>'+(selected==='C++'?'<p class="muted">默认安排中，A24t Ex76–80 待定。先给已开始的难题留续做时间。</p>':'')+topics.map((name,i)=>{const key=topicKey(selected,name,i);const t=state.topics[key];return '<div class="task">'+esc(name)+' <small>'+esc(t?.status|| (selected==='C++'&&i<2?'已学':selected==='项目管理'&&i>=10?'待上传':'未开始'))+'</small> '+btn('记录','topic',key)+(t?.note?'<div class="muted">'+esc(t.note)+'</div>':'')+'</div>'}).join('')+'</section></div><div>'+resourceCard(selected)+'<section class="card"><h2>课程任务</h2>'+btn('新增任务','new',focusDay)+list(state.tasks.filter(t=>t.course===selected),taskCard)+'</section></div></div>';
 }
 function resourceCard(course){
  return '<section class="card"><h2>资料</h2>'+btn('添加文件或链接','resource',course)+' '+list(state.resources.filter(r=>!course||course===r.course),r=>'<div class="task"><span class="pill">'+esc(r.course)+'</span> '+esc(r.name)+' '+btn('打开','open',r.id)+(r.note?'<p class="muted">'+esc(r.note)+'</p>':'')+'</div>','还没有添加资料')+'</section>';
@@ -199,7 +236,7 @@ function render(){
  $('nav').innerHTML=['今天','日历','课程','项目','资料','调整记录','设置'].map(name=>btn(name,'page',name,page===name?'active':'')).join('');
  const day=demo?'2026-11-28':today();
  const week=12+Math.floor((Date.parse(day)-Date.parse('2026-11-30'))/604800000);
- const main=state.tasks.find(t=>t.date===day&&!t.project)?.course;
+ const main=state.tasks.find(t=>t.date===day&&!t.project&&!t.supplemental)?.course;
  const views={今天:()=>'<section class="hero"><p>'+day+'　·　第 '+week+' 周（北京时间）</p><h1>今天做什么</h1><p>'+(main?'主要复习 · '+esc(main):'今天暂未安排主课')+'。学习 25–40 分钟后休息 5–10 分钟。</p></section><div class="grid"><div>'+dayPanel(day)+gapCard()+'<section class="card"><h2>进行中的项目</h2>'+list(Object.values(state.projects).filter(p=>p.completed.length<p.phases.length),p=>btn(p.title,'project',p.id))+'</section></div><div>'+progressCard()+eventsCard()+'</div></div>',日历:calendar,课程:courseView,项目:projects,资料:()=>resourceCard(''),调整记录:history,设置:settings};
  $('app').innerHTML=(demo?'<p class="warn">演示模式 · 操作不会写入你的实际进度。 '+btn('退出演示','exit-demo')+'</p>':'')+views[page]();
 }
