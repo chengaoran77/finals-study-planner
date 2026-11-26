@@ -25,12 +25,39 @@ const projectList = [
  ['cpp','C++','算法项目','','','具体日期待确认','','','项目代码、材料初稿、材料检查']
 ];
 function applyCppTaskPlan(tasks){
+ const matches = (task,base) => task && task.pct===0 && !task.fixed &&
+  task.course===base.course && task.date===base.date && task.minutes===base.minutes &&
+  task.title===base.title && task.detail===base.detail;
+ const internet=tasks.find(t=>t.id==='2026-12-25');
+ const cpp=tasks.find(t=>t.id==='2027-01-03');
+ const internetBase=seed.find(t=>t.id==='2026-12-25');
+ const cppBase=seed.find(t=>t.id==='2027-01-03');
+ const [oldTitle,oldDetail]=previousCppTaskPlan[cppBase.id];
+ if(matches(internet,internetBase)&&(matches(cpp,cppBase)||matches(cpp,{...cppBase,title:oldTitle,detail:oldDetail}))){
+  [internet.date,cpp.date]=[cpp.date,internet.date];
+ }
+ const presentationDay=tasks.find(t=>t.id==='2026-12-30');
+ const presentationBase=seed.find(t=>t.id==='2026-12-30');
+ if(matches(presentationDay,presentationBase)){
+  Object.assign(presentationDay,{
+   course:'C++',minutes:120,title:'A24t Ex76–78',
+   detail:'项目管理汇报仍暂定早八。汇报后留出休息，下午或晚些时候再做三题的核心小问。'
+  });
+ }
  for(const original of seed){
   const revision=cppTaskPlan[original.id];
   if(!revision)continue;
   const task=tasks.find(t=>t.id===original.id);
-  if(!task||task.pct!==0||task.title!==original.title||task.detail!==original.detail)continue;
-  [task.title,task.detail]=revision;
+  if(!task||task.pct!==0)continue;
+  const previous=previousCppTaskPlan[original.id];
+  const originalText=task.title===original.title&&task.detail===original.detail;
+  const previousText=task.title===previous[0]&&task.detail===previous[1];
+  if(!originalText&&!previousText)continue;
+  if(task.id===cppBase.id&&task.date!=='2026-12-25'){
+   [task.title,task.detail]=['C++ 考前复盘','回看已做的综合题、错题和 cours 索引。若已考完，按最近一门考试调整。'];
+  }else{
+   [task.title,task.detail]=revision;
+  }
  }
  return tasks;
 }
