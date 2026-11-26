@@ -24,8 +24,18 @@ const projectList = [
  ['management','项目管理','课程项目汇报','2026-12-24','2026-12-30','暂定早八','2026-12-25','2026-12-29','等待素材、制作PPT、PPT确认、制作视频、检查排练、汇报'],
  ['cpp','C++','算法项目','','','具体日期待确认','','','项目代码、材料初稿、材料检查']
 ];
+function applyCppTaskPlan(tasks){
+ for(const original of seed){
+  const revision=cppTaskPlan[original.id];
+  if(!revision)continue;
+  const task=tasks.find(t=>t.id===original.id);
+  if(!task||task.pct!==0||task.title!==original.title||task.detail!==original.detail)continue;
+  [task.title,task.detail]=revision;
+ }
+ return tasks;
+}
 const defaults = () => ({
- tasks:structuredClone(seed), events:[...Object.keys(courses).map(course=>({id:course,course,title:course+'期末考试',status:'待确认'})),{id:'civil-talk',course:'智能文明',title:'智能文明汇报（晚间第三节）',date:'2026-11-30',status:'暂定'}],
+ tasks:applyCppTaskPlan(structuredClone(seed)), events:[...Object.keys(courses).map(course=>({id:course,course,title:course+'期末考试',status:'待确认'})),{id:'civil-talk',course:'智能文明',title:'智能文明汇报（晚间第三节）',date:'2026-11-30',status:'暂定'}],
  classes:[], resources:[], projects:Object.fromEntries(projectList.map(([id,course,title,target,deadline,status,start,end,phases])=>[id,{id,course,title,target,deadline,status,start,end,phases:phases.split('、'),completed:id==='cpp'?['项目代码']:[],waiting:false}])),
  history:[], logs:[], topics:{}, caps:{normal:180,thursday:90,sunday:120}, gaps:[]
 });
@@ -282,7 +292,7 @@ async function restore(file){
   if(!match)throw Error('备份中的附件格式无效。');
   r.blob=new Blob([Uint8Array.from(atob(match[2]),c=>c.charCodeAt(0))],{type:match[1]});
  }
- await update(()=>{state=s});
+ await update(()=>{state=s;applyCppTaskPlan(state.tasks)});
 }
 let savedSession;
 document.addEventListener('click',async e=>{
@@ -354,6 +364,9 @@ document.addEventListener('click',async e=>{
 (async()=>{
  try{
   state=(await storage('readonly'))||defaults();
-  await update(()=>{if(state.tasks.some(t=>t.date&&t.date<today()&&!t.fixed&&t.pct<100))plan(today(),'打开网站，检查未完成的过期任务')});
+  await update(()=>{
+   applyCppTaskPlan(state.tasks);
+   if(state.tasks.some(t=>t.date&&t.date<today()&&!t.fixed&&t.pct<100))plan(today(),'打开网站，检查未完成的过期任务');
+  });
  }catch(e){$('app').textContent='无法读取浏览器存储：'+e.message}
 })();
