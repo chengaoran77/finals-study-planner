@@ -6,9 +6,14 @@ const add = (day,n) => new Date(Date.parse(day)+n*86400000).toISOString().slice(
 const weekday = day => new Date(day).getUTCDay();
 const minutes = s => {const [h,m]=s.split(':').map(Number); return h*60+m};
 const clock = min => Math.floor(min/60).toString().padStart(2,'0')+':'+(min%60).toString().padStart(2,'0');
+const previousCppTopics = 'TD Ex22、TD Ex23、TD Ex24、TD Ex25、TD Ex26、TD Ex28、TD Ex29、TD Ex30、TD Ex31、TD Ex32、TD Ex34、TD Ex35、TD Ex36、TD Ex37、A24t Ex70、A24t Ex71'.split('、');
+const cppTopics = [
+ ...Array.from({length:18},(_,i)=>'TD Ex'+(22+i)),
+ ...Array.from({length:11},(_,i)=>'A24t Ex'+(70+i))
+];
 const courses = {
  '数据结构':['期末 70% · 考试方式待确认','基本概念、顺序表、链表、线性表应用、栈、队列、栈队列应用、串、模式匹配、数组、矩阵与广义表、树基础、二叉树、遍历、树与森林、图存储、图遍历、查找、插入排序、交换与选择排序、归并基数与比较'],
- 'C++':['期中 30% · 期末 40%（开卷）· 项目 30%','TD Ex22、TD Ex23、TD Ex24、TD Ex25、TD Ex26、TD Ex28、TD Ex29、TD Ex30、TD Ex31、TD Ex32、TD Ex34、TD Ex35、TD Ex36、TD Ex37、A24t Ex70、A24t Ex71'],
+ 'C++':['期中 30% · 期末 40%（开卷）· 项目 30%',cppTopics.join('、')],
  '项目管理':['期末 30% · 项目 40% · 考试方式待确认',Array.from({length:16},(_,i)=>'第 '+(i+1)+' 周课件').join('、')],
  'Internet':['期末 50%（闭卷）· 平时 50%',Array.from({length:6},(_,i)=>'讲义第 '+(i+1)+' 章').join('、')],
  '智能文明':['期末 50%（开卷）· 第 16 周随堂考 · 手机规则待确认',Array.from({length:8},(_,i)=>'第 '+(i+1)+' 章').join('、')]
@@ -127,9 +132,15 @@ function calendar(){
  const days=Array.from({length:31},(_,i)=>add(first,i)).filter(d=>d.startsWith(month));
  return '<section class="card"><div class="row">'+btn('上月','month','-1')+'<h2>'+month+'</h2>'+btn('下月','month','1')+'</div><div class="calendar">'+['一','二','三','四','五','六','日'].map(x=>'<span class="weekday">'+x+'</span>').join('')+'<span></span>'.repeat(offset)+days.map(d=>btn(d.slice(-2)+(state.tasks.some(t=>t.date===d)?' ·':''),'day',d,d===focusDay?'active':'')).join('')+'</div></section>'+dayPanel(focusDay);
 }
+function topicKey(course,name,index){
+ if(course!=='C++')return course+'|'+index;
+ // Existing exercises keep their original storage keys so saved notes still match.
+ const previousIndex=previousCppTopics.indexOf(name);
+ return course+'|'+(previousIndex<0?name:previousIndex);
+}
 function courseView(){
  const topics=courses[selected][1].split('、');
- return '<div class="row">'+Object.keys(courses).map(c=>btn(c,'course',c,c===selected?'active':'')).join('')+'</div><div class="grid"><div><section class="card"><h2>'+selected+'</h2><p>'+courses[selected][0]+'</p><p>'+esc(state.events.find(e=>e.id===selected)?.date||'考试日期待确认')+'</p>'+btn('编辑考试','event',selected)+'</section><section class="card"><h2>学习目录</h2>'+topics.map((name,i)=>{const key=selected+'|'+i;const t=state.topics[key];return '<div class="task">'+esc(name)+' <small>'+esc(t?.status|| (selected==='C++'&&i<2?'已学':selected==='项目管理'&&i>=10?'待上传':'未开始'))+'</small> '+btn('记录','topic',key)+(t?.note?'<div class="muted">'+esc(t.note)+'</div>':'')+'</div>'}).join('')+'</section></div><div>'+resourceCard(selected)+'<section class="card"><h2>课程任务</h2>'+btn('新增任务','new',focusDay)+list(state.tasks.filter(t=>t.course===selected),taskCard)+'</section></div></div>';
+ return '<div class="row">'+Object.keys(courses).map(c=>btn(c,'course',c,c===selected?'active':'')).join('')+'</div><div class="grid"><div><section class="card"><h2>'+selected+'</h2><p>'+courses[selected][0]+'</p><p>'+esc(state.events.find(e=>e.id===selected)?.date||'考试日期待确认')+'</p>'+btn('编辑考试','event',selected)+'</section><section class="card"><h2>学习目录</h2>'+topics.map((name,i)=>{const key=topicKey(selected,name,i);const t=state.topics[key];return '<div class="task">'+esc(name)+' <small>'+esc(t?.status|| (selected==='C++'&&i<2?'已学':selected==='项目管理'&&i>=10?'待上传':'未开始'))+'</small> '+btn('记录','topic',key)+(t?.note?'<div class="muted">'+esc(t.note)+'</div>':'')+'</div>'}).join('')+'</section></div><div>'+resourceCard(selected)+'<section class="card"><h2>课程任务</h2>'+btn('新增任务','new',focusDay)+list(state.tasks.filter(t=>t.course===selected),taskCard)+'</section></div></div>';
 }
 function resourceCard(course){
  return '<section class="card"><h2>资料</h2>'+btn('添加文件或链接','resource',course)+' '+list(state.resources.filter(r=>!course||course===r.course),r=>'<div class="task"><span class="pill">'+esc(r.course)+'</span> '+esc(r.name)+' '+btn('打开','open',r.id)+(r.note?'<p class="muted">'+esc(r.note)+'</p>':'')+'</div>','还没有添加资料')+'</section>';
@@ -302,7 +313,8 @@ document.addEventListener('click',async e=>{
   break;
  }
  case 'topic':{
-  const [c,i]=key.split('|'), value=state.topics[key];
+  const [c]=key.split('|'), value=state.topics[key];
+  const i=courses[c][1].split('、').findIndex((name,index)=>topicKey(c,name,index)===key);
   const initial=c==='C++'&&Number(i)<2?'已学':c==='项目管理'&&Number(i)>=10?'待上传':'未开始';
   dialog(courses[c][1].split('、')[i],select('状态','status',['未开始','进行中','已学','需要重做','待上传'],value?.status||initial)+note('教材页码、题号、小问或难点','note',value?.note),f=>update(()=>{state.topics[key]=Object.fromEntries(f)}));
   break;
