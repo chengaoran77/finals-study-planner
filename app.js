@@ -19,11 +19,83 @@ const courses = {
  '智能文明':['期末 50%（开卷）· 第 16 周随堂考 · 手机规则待确认',Array.from({length:8},(_,i)=>'第 '+(i+1)+' 章').join('、')]
 };
 const projectList = [
- ['internet1','Internet','动态网站','2026-12-14','2026-12-20','暂定，具体时刻待确认','2026-12-15','2026-12-19','确认要求、搭建网站、核心功能、测试与文档、提交'],
- ['internet2','Internet','应用开发作业二','2026-12-14','','期末开考前，日期待确认','2026-12-15','2026-12-19','选择方向、搭建框架、实现功能、测试与文档、提交'],
+ ['internet1','Internet','城市美食探索网站','2026-12-14','2026-12-20','暂定，具体时刻待确认','2026-12-15','2026-12-19','确认要求与 Git/Gitee、Next.js 与数据库、餐厅 CRUD、筛选与统计、测试与文档、提交'],
+ ['internet2','Internet','专辑探索与深度聆听 Skill','2026-12-14','','期末开考前，日期待确认','2026-12-15','2026-12-19','确认方向与仓库、Skill 框架、口味画像与推荐流程、校验脚本、测试与文档、提交'],
  ['management','项目管理','课程项目汇报','2026-12-24','2026-12-30','暂定早八','2026-12-25','2026-12-29','等待素材、制作PPT、PPT确认、制作视频、检查排练、汇报'],
  ['cpp','C++','算法项目','','','具体日期待确认','','','项目代码、材料初稿、材料检查']
 ];
+const previousInternetProjects = {
+ internet1:{title:'动态网站',phases:'确认要求、搭建网站、核心功能、测试与文档、提交'},
+ internet2:{title:'应用开发作业二',phases:'选择方向、搭建框架、实现功能、测试与文档、提交'}
+};
+const internetTaskPlan = {
+ '2026-11-28-internet1':{
+  title:'确认城市美食探索网站要求',
+  detail:'核对动态网站、数据库、README、AI_USAGE 和真实 Git 历史要求。今天只确认范围，不写代码。'
+ },
+ '2026-12-01-internet2':{
+  title:'确定专辑探索与深度聆听 Skill 方向',
+  detail:'确认以完整专辑为推荐单位，采用延续型、桥梁型、探索型三层推荐；今天只定范围。'
+ },
+ '2026-12-02':{
+  title:'学习网络、Git 与 HTTP；建立两份作业的 Git/Gitee 仓库（约 3 小时）',
+  detail:'从零配置 Git 身份，分别创建 city-food-explorer 与 album-discovery-skill 仓库，加入需求分析 README，完成首次真实提交和推送；同时确认两份作业的运行环境。'
+ },
+ '2026-12-05':{
+  title:'学习 Web 基础；搭建城市美食探索网站框架与数据库（约 3—4 小时）',
+  detail:'初始化 Next.js、TypeScript、Prisma 与 SQLite，建立 Restaurant、Dish 模型并完成迁移，让餐厅列表能读取测试数据。按功能小步提交 Git。'
+ },
+ '2026-12-06-internet2':{
+  title:'搭建 album-discovery-guide Skill 框架',
+  detail:'创建 SKILL.md、agents、scripts、references、assets 与测试目录，写明触发条件、输入、三层推荐输出和第一版边界。'
+ },
+ '2026-12-09-internet1':{
+  title:'实现餐厅核心增删改查',
+  detail:'完成新增、编辑、删除和详情页，加入基础表单校验；完成一个独立功能就提交一次 Git。'
+ },
+ '2026-12-11-internet2':{
+  title:'实现专辑口味画像与推荐流程',
+  detail:'编写推荐规则与 taste dimensions，实现 analyze_profile.py 基础版，能从示例输入生成结构化口味画像。'
+ },
+ '2026-12-12':{
+  title:'城市美食探索网站：筛选、统计、测试与基础文档',
+  detail:'完成菜品管理、餐厅搜索、菜系/区域/价格/状态筛选和菜系统计；测试数据持久化并补 README 初稿，同时梳理讲义第 3—4 章重点。'
+ },
+ '2026-12-13-internet2':{
+  title:'校验专辑推荐并补充测试文档',
+  detail:'实现 validate_recommendations.py，检查重复、排除条件、层级比例和多样性；加入正确与错误案例并补 README 初稿。'
+ },
+ '2026-12-14':{
+  title:'两份作业形成可提交初版：运行测试、README、AI_USAGE 与 Git 检查',
+  detail:'完整运行城市美食探索网站和专辑探索 Skill，修复明显问题；检查 README、AI_USAGE、.gitignore、真实提交历史与 Gitee 最新推送。12 月 15—19 日只作故障缓冲。'
+ },
+ '2026-12-20':{
+  title:'核查两份 Internet 作业提交状态并制作开卷目录',
+  detail:'用未登录窗口检查两个公开 Gitee 仓库，核对 README、AI_USAGE 与提交历史；确认课程云盘中的两个仓库链接文件可打开。其余时间补齐智能文明八章并制作开卷目录。'
+ }
+};
+function applyInternetProjectPlan(data){
+ for(const [id,revision] of Object.entries(internetTaskPlan)){
+  const task=data.tasks.find(t=>t.id===id);
+  const original=seed.find(t=>t.id===id);
+  if(!task||!original||task.pct!==0||task.fixed)continue;
+  const untouched=task.title===original.title&&task.detail===original.detail;
+  const current=task.title===revision.title&&task.detail===revision.detail;
+  if(untouched||current)Object.assign(task,revision);
+ }
+ for(const [id,previous] of Object.entries(previousInternetProjects)){
+  const project=data.projects?.[id];
+  const latest=projectList.find(([projectId])=>projectId===id);
+  if(!project||!latest)continue;
+  const oldPhases=previous.phases.split('、');
+  const newPhases=latest[8].split('、');
+  const completed=new Set(project.completed||[]);
+  project.title=latest[2];
+  project.phases=newPhases;
+  project.completed=newPhases.filter((phase,index)=>completed.has(phase)||completed.has(oldPhases[index]));
+ }
+ return data;
+}
 function applyCppTaskPlan(tasks){
  const matches = (task,base) => task && task.pct===0 && !task.fixed &&
   task.course===base.course && task.date===base.date && task.minutes===base.minutes &&
@@ -104,7 +176,7 @@ function applyA24tSessions(tasks){
    supplemental:true,a24t:true,optional:true});
  }
 }
-const defaults = () => ({
+const defaults = () => applyInternetProjectPlan({
  tasks:applyCppTaskPlan(structuredClone(seed)), events:[...Object.keys(courses).map(course=>({id:course,course,title:course+'期末考试',status:'待确认'})),{id:'civil-talk',course:'智能文明',title:'智能文明汇报（晚间第三节）',date:'2026-11-30',status:'暂定'}],
  classes:[], resources:[], projects:Object.fromEntries(projectList.map(([id,course,title,target,deadline,status,start,end,phases])=>[id,{id,course,title,target,deadline,status,start,end,phases:phases.split('、'),completed:id==='cpp'?['项目代码']:[],waiting:false}])),
  history:[], logs:[], topics:{}, caps:{normal:180,thursday:90,sunday:120}, gaps:[]
@@ -248,7 +320,9 @@ function render(){
  const day=demo?'2026-11-28':today();
  const week=12+Math.floor((Date.parse(day)-Date.parse('2026-11-30'))/604800000);
  const main=state.tasks.find(t=>t.date===day&&!t.project&&!t.supplemental)?.course;
- const views={今天:()=>'<section class="hero"><p>'+day+'　·　第 '+week+' 周（北京时间）</p><h1>今天做什么</h1><p>'+(main?'主要复习 · '+esc(main):'今天暂未安排主课')+'。学习 25–40 分钟后休息 5–10 分钟。</p></section><div class="grid"><div>'+dayPanel(day)+gapCard()+'<section class="card"><h2>进行中的项目</h2>'+list(Object.values(state.projects).filter(p=>p.completed.length<p.phases.length),p=>btn(p.title,'project',p.id))+'</section></div><div>'+progressCard()+eventsCard()+'</div></div>',日历:calendar,课程:courseView,项目:projects,资料:()=>resourceCard(''),调整记录:history,设置:settings};
+ const projectReminders=[...new Set(state.tasks.filter(t=>t.date===day&&t.project&&t.pct<100).map(t=>state.projects[t.project]?.title).filter(Boolean))];
+ const projectNote=projectReminders.length?'；项目提醒 · '+projectReminders.map(esc).join('、'):'';
+ const views={今天:()=>'<section class="hero"><p>'+day+'　·　第 '+week+' 周（北京时间）</p><h1>今天做什么</h1><p>'+(main?'主要复习 · '+esc(main):'今天暂未安排主课')+projectNote+'。学习 25–40 分钟后休息 5–10 分钟。</p></section><div class="grid"><div>'+dayPanel(day)+gapCard()+'<section class="card"><h2>进行中的项目</h2>'+list(Object.values(state.projects).filter(p=>p.completed.length<p.phases.length),p=>btn(p.title,'project',p.id))+'</section></div><div>'+progressCard()+eventsCard()+'</div></div>',日历:calendar,课程:courseView,项目:projects,资料:()=>resourceCard(''),调整记录:history,设置:settings};
  $('app').innerHTML=(demo?'<p class="warn">演示模式 · 操作不会写入你的实际进度。 '+btn('退出演示','exit-demo')+'</p>':'')+views[page]();
 }
 const field=(label,name,value='',type='text',attrs='')=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
@@ -441,6 +515,7 @@ document.addEventListener('click',async e=>{
   state=(await storage('readonly'))||defaults();
   await update(()=>{
    applyCppTaskPlan(state.tasks);
+   applyInternetProjectPlan(state);
    if(state.tasks.some(t=>t.date&&t.date<today()&&!t.fixed&&t.pct<100))plan(today(),'打开网站，检查未完成的过期任务');
   });
  }catch(e){$('app').textContent='无法读取浏览器存储：'+e.message}
