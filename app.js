@@ -28,44 +28,69 @@ const previousInternetProjects = {
  internet1:{title:'动态网站',phases:'确认要求、搭建网站、核心功能、测试与文档、提交'},
  internet2:{title:'应用开发作业二',phases:'选择方向、搭建框架、实现功能、测试与文档、提交'}
 };
+const internetSchedule = [
+ {date:'2026-11-28',label:'11月28日',time:'20分钟',work1:'查看要求',work2:'暂不开发',progress:'明确提交物'},
+ {date:'2026-12-01',label:'12月1日',time:'30分钟',work1:'—',work2:'确定专辑 Skill 方向',progress:'作业2需求确定'},
+ {date:'2026-12-02',label:'12月2日',time:'约3小时',work1:'Git、Gitee、仓库和环境',work2:'Git、Gitee、仓库和 Skill 设计',progress:'两个仓库建立'},
+ {date:'2026-12-05',label:'12月5日',time:'3～4小时',work1:'搭建网站、数据库和页面框架',work2:'—',progress:'作业1达到40%'},
+ {date:'2026-12-06',label:'12月6日',time:'约1小时',work1:'—',work2:'搭建 Skill 目录',progress:'作业2达到30%'},
+ {date:'2026-12-09',label:'12月9日',time:'约1小时',work1:'完成餐厅核心 CRUD',work2:'—',progress:'作业1达到65%'},
+ {date:'2026-12-11',label:'12月11日',time:'约1小时',work1:'—',work2:'完成 Skill 核心流程和口味分析',progress:'作业2达到60%'},
+ {date:'2026-12-12',label:'12月12日',time:'约2小时',work1:'筛选、统计、测试和基础文档',work2:'—',progress:'作业1达到90%'},
+ {date:'2026-12-13',label:'12月13日',time:'约1小时',work1:'—',work2:'校验脚本、测试和文档',progress:'作业2达到85%'},
+ {date:'2026-12-14',label:'12月14日',time:'2～3小时',work1:'完善并形成可提交版本',work2:'完善并形成可提交版本',progress:'两个项目100%'},
+ {start:'2026-12-15',end:'2026-12-19',label:'12月15—19日',time:'按需',work1:'只修复问题',work2:'只修复问题',progress:'共同缓冲'},
+ {date:'2026-12-20',label:'12月20日',time:'20～30分钟',work1:'检查链接和云盘',work2:'检查链接和云盘',progress:'确认提交'}
+];
+function internetScheduleFor(day){return internetSchedule.find(item=>item.date===day||(item.start&&day>=item.start&&day<=item.end))}
 const internetTaskPlan = {
  '2026-11-28-internet1':{
+  minutes:20,
   title:'确认城市美食探索网站要求',
   detail:'核对动态网站、数据库、README、AI_USAGE 和真实 Git 历史要求。今天只确认范围，不写代码。'
  },
  '2026-12-01-internet2':{
+  minutes:30,
   title:'确定专辑探索与深度聆听 Skill 方向',
   detail:'确认以完整专辑为推荐单位，采用延续型、桥梁型、探索型三层推荐；今天只定范围。'
  },
  '2026-12-02':{
+  minutes:180,
   title:'学习网络、Git 与 HTTP；建立两份作业的 Git/Gitee 仓库（约 3 小时）',
   detail:'从零配置 Git 身份，分别创建 city-food-explorer 与 album-discovery-skill 仓库，加入需求分析 README，完成首次真实提交和推送；同时确认两份作业的运行环境。'
  },
  '2026-12-05':{
+  minutes:210,
   title:'学习 Web 基础；搭建城市美食探索网站框架与数据库（约 3—4 小时）',
   detail:'初始化 Next.js、TypeScript、Prisma 与 SQLite，建立 Restaurant、Dish 模型并完成迁移，让餐厅列表能读取测试数据。按功能小步提交 Git。'
  },
  '2026-12-06-internet2':{
+  minutes:60,
   title:'搭建 album-discovery-guide Skill 框架',
   detail:'创建 SKILL.md、agents、scripts、references、assets 与测试目录，写明触发条件、输入、三层推荐输出和第一版边界。'
  },
  '2026-12-09-internet1':{
+  minutes:60,
   title:'实现餐厅核心增删改查',
   detail:'完成新增、编辑、删除和详情页，加入基础表单校验；完成一个独立功能就提交一次 Git。'
  },
  '2026-12-11-internet2':{
+  minutes:60,
   title:'实现专辑口味画像与推荐流程',
   detail:'编写推荐规则与 taste dimensions，实现 analyze_profile.py 基础版，能从示例输入生成结构化口味画像。'
  },
  '2026-12-12':{
+  minutes:120,
   title:'城市美食探索网站：筛选、统计、测试与基础文档',
   detail:'完成菜品管理、餐厅搜索、菜系/区域/价格/状态筛选和菜系统计；测试数据持久化并补 README 初稿，同时梳理讲义第 3—4 章重点。'
  },
  '2026-12-13-internet2':{
+  minutes:60,
   title:'校验专辑推荐并补充测试文档',
   detail:'实现 validate_recommendations.py，检查重复、排除条件、层级比例和多样性；加入正确与错误案例并补 README 初稿。'
  },
  '2026-12-14':{
+  minutes:150,
   title:'两份作业形成可提交初版：运行测试、README、AI_USAGE 与 Git 检查',
   detail:'完整运行城市美食探索网站和专辑探索 Skill，修复明显问题；检查 README、AI_USAGE、.gitignore、真实提交历史与 Gitee 最新推送。12 月 15—19 日只作故障缓冲。'
  },
@@ -302,8 +327,11 @@ function courseView(){
 function resourceCard(course){
  return '<section class="card"><h2>资料</h2>'+btn('添加文件或链接','resource',course)+' '+list(state.resources.filter(r=>!course||course===r.course),r=>'<div class="task"><span class="pill">'+esc(r.course)+'</span> '+esc(r.name)+' '+btn('打开','open',r.id)+(r.note?'<p class="muted">'+esc(r.note)+'</p>':'')+'</div>','还没有添加资料')+'</section>';
 }
+function internetScheduleCard(){
+ return '<section class="card schedule-card"><h2>调整后的项目计划</h2><p class="muted">只在下列日期推进两份 Internet 作业；12 月 15—19 日仅在出现问题时启用缓冲。</p><div class="table-scroll"><table><thead><tr><th>日期</th><th>时间</th><th>作业1</th><th>作业2</th><th>预计进度</th></tr></thead><tbody>'+internetSchedule.map(item=>'<tr><td>'+esc(item.label)+'</td><td>'+esc(item.time)+'</td><td>'+esc(item.work1)+'</td><td>'+esc(item.work2)+'</td><td>'+esc(item.progress)+'</td></tr>').join('')+'</tbody></table></div></section>';
+}
 function projects(){
- return '<div class="grid">'+Object.values(state.projects).map(p=>{
+ return internetScheduleCard()+'<div class="grid">'+Object.values(state.projects).map(p=>{
   const used=new Set(state.tasks.filter(t=>t.project===p.id&&protectedDay(p,t.date)).map(t=>t.date)).size;
   const length=p.start&&p.end?Math.round((Date.parse(p.end)-Date.parse(p.start))/86400000)+1:0;
   return '<section class="card"><span class="pill">'+esc(p.course)+'</span><h2>'+esc(p.title)+'</h2><p>个人目标 '+esc(p.target||'待确认')+'<br>老师节点 '+esc(p.deadline||'待确认')+' · '+esc(p.status)+'</p><p>缓冲 '+(length?esc(p.start+' 至 '+p.end)+' · 已安排 '+used+' 天、剩余 '+(length-used)+' 天':'待设置')+'</p>'+(p.waiting?'<p class="warn">等待组员材料，相关未完成任务暂缓安排。</p>':'')+(p.course==='Internet'?'<p class="muted">提交前检查源代码、真实 Git 历史、README 和 AI_USAGE.md。公开仓库按要求交链接，非公开仓库交包含 .git 的压缩包。</p>':'')+p.phases.map(name=>'<div class="task">'+(p.completed.includes(name)?'✓ ':'')+esc(name)+'</div>').join('')+'<div class="actions">'+btn('编辑项目','project',p.id)+btn('新增项目任务','new-project',p.id)+'</div>'+list(state.tasks.filter(t=>t.project===p.id),taskCard,'暂无独立项目任务')+'</section>';
@@ -321,7 +349,9 @@ function render(){
  const week=12+Math.floor((Date.parse(day)-Date.parse('2026-11-30'))/604800000);
  const main=state.tasks.find(t=>t.date===day&&!t.project&&!t.supplemental)?.course;
  const projectReminders=[...new Set(state.tasks.filter(t=>t.date===day&&t.project&&t.pct<100).map(t=>state.projects[t.project]?.title).filter(Boolean))];
- const projectNote=projectReminders.length?'；项目提醒 · '+projectReminders.map(esc).join('、'):'';
+ const scheduled=internetScheduleFor(day);
+ const scheduledWork=scheduled?[scheduled.work1!=='—'?'作业1：'+scheduled.work1:'',scheduled.work2!=='暂不开发'&&scheduled.work2!=='—'?'作业2：'+scheduled.work2:''].filter(Boolean):[];
+ const projectNote=scheduledWork.length?'；项目安排 · '+scheduledWork.map(esc).join('；'):projectReminders.length?'；项目提醒 · '+projectReminders.map(esc).join('、'):'';
  const views={今天:()=>'<section class="hero"><p>'+day+'　·　第 '+week+' 周（北京时间）</p><h1>今天做什么</h1><p>'+(main?'主要复习 · '+esc(main):'今天暂未安排主课')+projectNote+'。学习 25–40 分钟后休息 5–10 分钟。</p></section><div class="grid"><div>'+dayPanel(day)+gapCard()+'<section class="card"><h2>进行中的项目</h2>'+list(Object.values(state.projects).filter(p=>p.completed.length<p.phases.length),p=>btn(p.title,'project',p.id))+'</section></div><div>'+progressCard()+eventsCard()+'</div></div>',日历:calendar,课程:courseView,项目:projects,资料:()=>resourceCard(''),调整记录:history,设置:settings};
  $('app').innerHTML=(demo?'<p class="warn">演示模式 · 操作不会写入你的实际进度。 '+btn('退出演示','exit-demo')+'</p>':'')+views[page]();
 }
